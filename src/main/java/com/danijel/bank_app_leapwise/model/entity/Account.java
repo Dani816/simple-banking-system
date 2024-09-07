@@ -16,8 +16,6 @@ public class Account {
 
     private Long accountNumber;
 
-    private Long accountType;
-
     private Double balance;
 
     private Long pastMonthTurnover;

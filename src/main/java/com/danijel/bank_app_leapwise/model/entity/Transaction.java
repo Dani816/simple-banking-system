@@ -22,9 +22,7 @@ public class Transaction {
 
     private Double amount;
 
-    private Long currencyId;
-
     private String message;
 
-    private ZonedDateTime zonedDateTime;
+    private ZonedDateTime timeStamp;
 }
