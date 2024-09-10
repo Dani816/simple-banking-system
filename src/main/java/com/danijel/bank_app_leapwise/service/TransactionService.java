@@ -1,11 +1,13 @@
 package com.danijel.bank_app_leapwise.service;
 
 import com.danijel.bank_app_leapwise.model.command.TransactionCommand;
+import com.danijel.bank_app_leapwise.model.dto.TransactionDTO;
 import com.danijel.bank_app_leapwise.model.entity.Account;
 import com.danijel.bank_app_leapwise.model.entity.Transaction;
 import com.danijel.bank_app_leapwise.repository.AccountRepository;
 import com.danijel.bank_app_leapwise.repository.TransactionRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.ZonedDateTime;
@@ -53,5 +55,36 @@ public class TransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         return savedTransaction.getId();
+    }
+
+    public List<TransactionDTO> getTransactionHistory(Long customerId, String filterName, String filterValue) {
+        List<Long> customerAccountIds = accountRepository.findByCustomerId(customerId)
+                .stream()
+                .map(Account::getId)
+                .toList();
+
+        Specification<Transaction> spec = Specification.where((root, query, cb) ->
+                cb.or(
+                        root.get("senderAccountId").in(customerAccountIds),
+                        root.get("receiverAccountId").in(customerAccountIds)
+                )
+        );
+
+        if (filterName != null && filterValue != null) {
+            spec = spec.and((root, query, cb) -> switch (filterName) {
+                case "amount" -> cb.equal(root.get("amount"), Double.parseDouble(filterValue));
+                case "message" -> cb.like(cb.lower(root.get("message")), "%" + filterValue.toLowerCase() + "%");
+                case "timeStamp" -> {
+                    ZonedDateTime dateTime = ZonedDateTime.parse(filterValue);
+                    yield cb.between(root.get("timeStamp"),
+                            dateTime.withHour(0).withMinute(0).withSecond(0),
+                            dateTime.withHour(23).withMinute(59).withSecond(59));
+                }
+                default -> null;
+            });
+        }
+
+        List<Transaction> transactions = transactionRepository.findAll(spec);
+        return TransactionDTO.fromEntityList(transactions);
     }
 }
