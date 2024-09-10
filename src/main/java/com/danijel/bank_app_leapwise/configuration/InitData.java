@@ -1,4 +1,4 @@
-package com.danijel.bank_app_leapwise;
+package com.danijel.bank_app_leapwise.configuration;
 
 import com.danijel.bank_app_leapwise.model.entity.Account;
 import com.danijel.bank_app_leapwise.model.entity.Customer;
