@@ -27,7 +27,7 @@ public class Scheduler {
     }
 
 
-    @Scheduled(cron = "*/10 * * * * *")
+    @Scheduled(cron = "* 1 * * * *")
     @Transactional
     public void calculatePastMonthTurnover() {
         log.info("[SCHEDULED] starting calculatePastMonthTurnover");
