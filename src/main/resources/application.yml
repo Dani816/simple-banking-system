@@ -25,5 +25,7 @@ spring:
             enable: true
     test-connection: true
 
+from_email: PsGVWRuOf0hjPype@outlook.com
+to_email: PsGVWRuOf0hjPype@outlook.com
 
 

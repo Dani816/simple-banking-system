@@ -6,6 +6,7 @@ import com.danijel.bank_app_leapwise.model.entity.Account;
 import com.danijel.bank_app_leapwise.model.entity.Transaction;
 import com.danijel.bank_app_leapwise.repository.AccountRepository;
 import com.danijel.bank_app_leapwise.repository.TransactionRepository;
+import com.danijel.bank_app_leapwise.util.EmailBodyTemplate;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -32,37 +33,67 @@ public class TransactionService {
     }
 
     public Long saveTransaction(TransactionCommand command) {
+        Transaction transaction = mapTransactionCommandToEntity(command);
+        Account sender = getAccountById(transaction.getSenderAccountId());
+        Account receiver = getAccountById(transaction.getReceiverAccountId());
 
-        Transaction transaction = new Transaction();
+        validateTransaction(sender, transaction.getAmount());
 
-        modelMapper.map(command, transaction);
-        transaction.setTimeStamp(ZonedDateTime.now());
-
-        var sender = accountRepository.findById(transaction.getSenderAccountId());
-        var receiver = accountRepository.findById(transaction.getReceiverAccountId());
-
-        if (sender.isEmpty() || receiver.isEmpty()) {
-            throw new RuntimeException("Sender: " + sender.isEmpty() + "Receiver: " + receiver.isEmpty());
-        }
-
-        if (sender.get().getBalance() < transaction.getAmount()) {
-            throw new RuntimeException("Sender's account balance is insufficient to complete the transaction.");
-        }
-
-        sender.get().setBalance(sender.get().getBalance() - transaction.getAmount());
-        receiver.ifPresent(acc -> acc.setBalance(acc.getBalance() + transaction.getAmount()));
-
-        List<Account> accounts = List.of(sender.get(), receiver.get());
-        accountRepository.saveAll(accounts);
+        double oldAmount = sender.getBalance();
+        saveNewAccountBalances(sender, receiver, transaction.getAmount());
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        emailService.sendSimpleEmail("New transactions notice", "hehed asasd");
+        sendSuccessEmail(savedTransaction, transaction.getAmount(), sender.getBalance(), oldAmount );
 
         return savedTransaction.getId();
     }
 
+    private Transaction mapTransactionCommandToEntity(TransactionCommand command) {
+        Transaction transaction = new Transaction();
+        modelMapper.map(command, transaction);
+        transaction.setTimeStamp(ZonedDateTime.now());
+        return transaction;
+    }
+
+    private Account getAccountById(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> {
+                    sendFailureEmail();
+                    return new RuntimeException("Account not found with ID: " + accountId);
+                });
+    }
+
+    private void validateTransaction(Account sender, double amount) {
+        if (sender.getBalance() < amount) {
+            sendFailureEmail();
+            throw new RuntimeException("Sender's account balance is insufficient to complete the transaction.");
+        }
+    }
+
+    private void saveNewAccountBalances(Account sender, Account receiver, double amount) {
+        sender.setBalance(sender.getBalance() - amount);
+        receiver.setBalance(receiver.getBalance() + amount);
+        accountRepository.saveAll(List.of(sender, receiver));
+    }
+
+    private void sendSuccessEmail(Transaction transaction, double amount, double oldBalance, double newBalance) {
+        String emailBody = EmailBodyTemplate.createSuccessEmailBody(transaction.getId(), amount, oldBalance, newBalance);
+        emailService.sendSimpleEmail("New transaction notice", emailBody);
+    }
+
+    private void sendFailureEmail() {
+        String emailBody = EmailBodyTemplate.createFailureEmailBody();
+        emailService.sendSimpleEmail("Failed transaction notice", emailBody);
+    }
+
     public List<TransactionDTO> getTransactionHistory(Long customerId, String filterName, String filterValue) {
+        Specification<Transaction> spec = getTransactionSpecification(customerId, filterName, filterValue);
+        List<Transaction> transactions = transactionRepository.findAll(spec);
+        return TransactionDTO.fromEntityList(transactions);
+    }
+
+    private Specification<Transaction> getTransactionSpecification(Long customerId, String filterName, String filterValue) {
         List<Long> customerAccountIds = accountRepository.findByCustomerId(customerId)
                 .stream()
                 .map(Account::getId)
@@ -88,8 +119,6 @@ public class TransactionService {
                 default -> null;
             });
         }
-
-        List<Transaction> transactions = transactionRepository.findAll(spec);
-        return TransactionDTO.fromEntityList(transactions);
+        return spec;
     }
 }
