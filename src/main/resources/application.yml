@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: bank_app_leapwise
+  datasource:
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+  mail:
+    host: smtp.office365.com
+    port: 587
+    username: 'PsGVWRuOf0hjPype@outlook.com'
+    password: 'QZAFCEJ8Y3iWrovB'
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    test-connection: true
+
+
+

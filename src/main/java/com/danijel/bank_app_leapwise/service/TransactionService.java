@@ -19,13 +19,16 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final ModelMapper modelMapper;
+    private final EmailService emailService;
 
     public TransactionService(TransactionRepository transactionRepository,
                               AccountRepository accountRepository,
-                              ModelMapper modelMapper) {
+                              ModelMapper modelMapper,
+                              EmailService emailService) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.modelMapper = modelMapper;
+        this.emailService = emailService;
     }
 
     public Long saveTransaction(TransactionCommand command) {
@@ -53,6 +56,8 @@ public class TransactionService {
         accountRepository.saveAll(accounts);
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+
+        emailService.sendSimpleEmail("New transactions notice", "hehed asasd");
 
         return savedTransaction.getId();
     }
