@@ -64,7 +64,7 @@ public class InitData {
         createFileWithTransactions(customers);
         readAndSaveTransactions();
 
-        log.info("Time taken: " + Duration.between(start, Instant.now()).toSeconds() + "Seconds");
+        log.info("Time taken: " + Duration.between(start, Instant.now()).toSeconds() + " Seconds");
         log.info("*****************************************");
     }
 
