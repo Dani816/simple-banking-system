@@ -150,7 +150,6 @@ public class InitData {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Can't find different account for receiver"));
 
-
         Transaction transaction = new Transaction();
         transaction.setSenderAccountId(sender.getId());
         transaction.setReceiverAccountId(receiver.getId());
@@ -183,14 +182,22 @@ public class InitData {
 
     private Transaction parseTransaction(String line) {
         List<String> fields = List.of(line.split(","));
-        return createTransaction(fields);
+
+        Transaction transaction = new Transaction();
+        transaction.setSenderAccountId(Long.parseLong(fields.get(0)));
+        transaction.setReceiverAccountId(Long.parseLong(fields.get(1)));
+        transaction.setAmount(Double.parseDouble(fields.get(2)));
+        transaction.setMessage(fields.get(3));
+        transaction.setTimeStamp(ZonedDateTime.parse(fields.get(4)));
+
+        return transaction;
     }
 
     private void processBatch(Long batchId, List<Transaction> transactions) {
         List<Long> accountIds = transactions.stream()
                 .flatMap(t -> Stream.of(t.getSenderAccountId(), t.getReceiverAccountId()))
                 .distinct()
-                .collect(Collectors.toList());
+                .toList();
 
         Map<Long, Account> accountMap = accountRepository.findAllById(accountIds)
                 .stream()
@@ -221,15 +228,5 @@ public class InitData {
 
         accountRepository.saveAll(updatedAccounts);
         transactionRepository.saveAll(validTransactions);
-    }
-
-    private static Transaction createTransaction(List<String> rec) {
-        Transaction transaction = new Transaction();
-        transaction.setSenderAccountId(Long.parseLong(rec.get(0)));
-        transaction.setReceiverAccountId(Long.parseLong(rec.get(1)));
-        transaction.setAmount(Double.parseDouble(rec.get(2)));
-        transaction.setMessage(rec.get(3));
-        transaction.setTimeStamp(ZonedDateTime.parse(rec.get(4)));
-        return transaction;
     }
 }
